@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Syne } from "next/font/google";
 import "./globals.css";
 
 const ibmSans = IBM_Plex_Sans({
@@ -14,16 +14,23 @@ const ibmMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
+const syne = Syne({
+  variable: "--font-syne",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "Aisle",
-  description: "The storefront protocol for AI agents. Five minutes to an AI-native shop that settles in XSGD.",
+  description:
+    "The storefront protocol for AI agents. Merchants converse. Agents discover llms.txt and pay in XSGD.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${ibmSans.variable} ${ibmMono.variable} h-full antialiased`}
+      className={`${ibmSans.variable} ${ibmMono.variable} ${syne.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background font-sans text-foreground">
         {children}

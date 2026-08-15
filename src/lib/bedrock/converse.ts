@@ -20,6 +20,16 @@ export function bedrockWanted() {
 }
 
 function client() {
+  const token = process.env.AWS_BEARER_TOKEN_BEDROCK?.trim();
+  // Prefer Bedrock API key only when set; otherwise use IAM/.env keys
+  // (personal aisle-cli account works; hackathon account often blocks Marketplace).
+  if (token) {
+    return new BedrockRuntimeClient({
+      region: config.bedrockRegion,
+      authSchemePreference: ["httpBearerAuth"],
+      token: async () => ({ token }),
+    });
+  }
   return new BedrockRuntimeClient({ region: config.bedrockRegion });
 }
 
