@@ -1,4 +1,4 @@
-import { config } from "@/lib/config";
+import { sampleMarketStores } from "@/lib/market/sample-stores";
 import type { StoreRepo } from "@/lib/store/types-repo";
 import type { CardMandate, Order, StoreRecord } from "@/lib/store/types";
 
@@ -8,35 +8,23 @@ type Db = {
   mandates: Map<string, CardMandate>;
 };
 
-const globalForDb = globalThis as typeof globalThis & { __aisleDb?: Db };
+const globalForDb = globalThis as typeof globalThis & { __aisleDbV4?: Db };
 
 function seed(): Db {
   const stores = new Map<string, StoreRecord>();
   const orders = new Map<string, Order>();
   const mandates = new Map<string, CardMandate>();
-  stores.set("hackathon-shirts", {
-    slug: "hackathon-shirts",
-    name: "StraitsX Hackathon Shirts",
-    merchantAddress: config.merchantAddress,
-    createdAt: new Date().toISOString(),
-    skus: [
-      {
-        id: "shirt",
-        title: "StraitsX Hackathon Shirt",
-        description: "Official AgentiX Playground tee. Priced in XSGD.",
-        quantity: 50,
-        price: "5.00",
-      },
-    ],
-  });
+  for (const store of sampleMarketStores()) {
+    stores.set(store.slug, store);
+  }
   return { stores, orders, mandates };
 }
 
 function db(): Db {
-  if (!globalForDb.__aisleDb) {
-    globalForDb.__aisleDb = seed();
+  if (!globalForDb.__aisleDbV4) {
+    globalForDb.__aisleDbV4 = seed();
   }
-  const current = globalForDb.__aisleDb as Db & {
+  const current = globalForDb.__aisleDbV4 as Db & {
     mandates?: Map<string, CardMandate>;
   };
   if (!current.mandates) {

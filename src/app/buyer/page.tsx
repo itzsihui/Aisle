@@ -164,19 +164,20 @@ export default function BuyerPage() {
               Buyer agent
             </h1>
             <p className="mt-2 max-w-[52ch] text-foreground/70">
-              Separate from merchant setup. Reads agent discovery docs, then
-              completes payment (Avalanche x402 + StraitsX card — both show in
-              the log).
+              Separate from merchant setup. Discovers via /llms.txt + registry
+              (slug optional), then pays Avalanche x402 + StraitsX card.
               {storeSlug ? (
                 <>
                   {" "}
-                  Using last published store{" "}
+                  Last handoff store{" "}
                   <span className="font-mono text-foreground/85">
                     /s/{storeSlug}
                   </span>
                   .
                 </>
-              ) : null}
+              ) : (
+                <> Browse <Link href="/market" className="underline underline-offset-2">Market</Link> or try “buy a tote bag”.</>
+              )}
             </p>
           </div>
           <Link

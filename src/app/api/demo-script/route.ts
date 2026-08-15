@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const rails = body.rails?.length ? body.rails : (["x402", "card"] as const);
   const merchantMessage =
     body.merchantMessage ||
-    "Create a store. I'm selling 50 StraitsX Hackathon Shirts for 5 XSGD each.";
+    "Create a store. I'm selling 50 StraitsX Hackathon Shirts for 0.01 XSGD each.";
   const buyerMessage =
     body.buyerMessage ||
     "Agent, go to /s/hackathon-shirts and buy a hackathon shirt.";

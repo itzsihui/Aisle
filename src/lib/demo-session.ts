@@ -87,7 +87,7 @@ export function storeRefFromPublish(store: {
 
 export function defaultBuyerPrompt(store?: SessionStoreRef | null) {
   if (!store?.slug) {
-    return "Agent, go to /s/hackathon-shirts and buy a hackathon shirt.";
+    return "Agent, buy a tote bag.";
   }
   const product = store.productHint || "item";
   const article = /^[aeiou]/i.test(product) ? "an" : "a";
@@ -106,6 +106,6 @@ export const DEFAULT_ONBOARD_LINES: OnboardSession["lines"] = [
 export const DEFAULT_BUYER_LINES: BuyerSession["lines"] = [
   {
     role: "agent",
-    text: "Buyer agent ready. I will read llms.txt / agent.json, not HTML.",
+    text: "Buyer agent ready. I read /llms.txt + /registry.json (and store catalogs) — not HTML. You can name a product without a slug.",
   },
 ];

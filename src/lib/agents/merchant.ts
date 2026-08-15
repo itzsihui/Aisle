@@ -109,7 +109,7 @@ export async function runMerchantAgent(args: {
   const userMessage =
     args.csv?.trim() ||
     args.message?.trim() ||
-    "Create a store selling 50 StraitsX Hackathon Shirts for 5 XSGD each.";
+    "Create a store selling 50 StraitsX Hackathon Shirts for 0.01 XSGD each.";
 
   if (args.csv?.trim()) {
     const csvResult = await createStoreTool({

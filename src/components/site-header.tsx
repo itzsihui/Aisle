@@ -17,6 +17,9 @@ export function SiteHeader({ className }: { className?: string }) {
           Aisle
         </Link>
         <nav className="flex items-center gap-5 text-sm text-foreground/65">
+          <Link href="/market" className="hover:text-foreground">
+            Market
+          </Link>
           <Link href="/onboard" className="hover:text-foreground">
             Open a store
           </Link>

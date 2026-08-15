@@ -21,7 +21,7 @@ export const config = {
    * Demo unit price in XSGD. StraitsX sandbox card issuance requires 5–30 SGD;
    * keep store SKUs at this floor so x402 + card rails stay aligned.
    */
-  demoUnitPriceXsgd: "5.00",
+  demoUnitPriceXsgd: "0.01",
   merchantAddress: env(
     "MERCHANT_ADDRESS",
     "0x0000000000000000000000000000000000000000",

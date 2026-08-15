@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const mandate = await issueScopedCard({
-      spendCap: body.spendCap || "5.00",
+      spendCap: body.spendCap || "0.01",
       merchant: body.merchant || "hackathon-shirts",
     });
     return Response.json(mandate);

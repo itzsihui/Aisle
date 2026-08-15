@@ -67,7 +67,7 @@ const seedStore = (): StoreRecord => ({
       title: "StraitsX Hackathon Shirt",
       description: "Official AgentiX Playground tee. Priced in XSGD.",
       quantity: 50,
-      price: "5.00",
+      price: "0.01",
     },
   ],
 });

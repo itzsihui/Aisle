@@ -1,4 +1,5 @@
 import { config } from "@/lib/config";
+import { resolveBuyerTarget } from "@/lib/agents/discover";
 import { emit } from "@/lib/protocol/events";
 import { issueScopedCard } from "@/lib/straitsx/mcp";
 import { repo } from "@/lib/store/repo";
@@ -14,11 +15,31 @@ export async function runCardAgent(args: {
   slug?: string;
 }): Promise<{ steps: CardStep[]; receipt?: unknown; mandate?: unknown }> {
   const steps: CardStep[] = [];
-  const slug =
-    args.slug ||
-    args.message?.match(/\/s\/([a-z0-9-]+)/i)?.[1] ||
-    "hackathon-shirts";
+
+  const resolved = await resolveBuyerTarget({
+    slug: args.slug,
+    message: args.message,
+  });
+
+  if (!resolved.ok) {
+    steps.push({
+      type: "error",
+      text: resolved.available
+        ? `${resolved.reason} Available: ${resolved.available}.`
+        : resolved.reason,
+    });
+    return { steps };
+  }
+
+  const { slug, sku, via } = resolved;
   const base = `${args.origin}/s/${slug}`;
+
+  if (via === "registry") {
+    steps.push({
+      type: "info",
+      text: `Network registry → matched ${sku.title} @ /s/${slug}`,
+    });
+  }
 
   steps.push({ type: "info", text: `Discovering ${base}/llms.txt` });
   const llms = await fetch(`${base}/llms.txt`);
@@ -28,16 +49,11 @@ export async function runCardAgent(args: {
   });
 
   const catalogRes = await fetch(`${base}/catalog.json`);
-  const catalog = (await catalogRes.json()) as {
-    products?: Array<{ id: string; title: string; price?: string }>;
-  };
-  const sku = catalog.products?.[0];
-  if (!sku) {
-    steps.push({ type: "error", text: "Catalog empty" });
-    return { steps };
-  }
   const store = await repo.getStore(slug);
-  const price = store?.skus.find((s) => s.id === sku.id)?.price ?? "5.00";
+  const price =
+    store?.skus.find((s) => s.id === sku.id)?.price ??
+    store?.skus[0]?.price ??
+    "0.01";
   steps.push({
     type: "http",
     text: `GET catalog.json → ${catalogRes.status} ${sku.title} @ ${price}`,
@@ -95,7 +111,6 @@ export async function runCardAgent(args: {
     return { steps, mandate };
   }
 
-  // Local SSE only sees Next emits; when checkout hits API Gateway, mirror it here.
   emit({
     status: checkout.status,
     method: "POST",
@@ -119,7 +134,7 @@ export async function runCardAgent(args: {
   const paid = receipt as { amount?: string; orderId?: string };
   steps.push({
     type: "success",
-    text: `HTTP ${checkout.status} receipt · ${paid.amount ?? "paid"} · burned ${mandate.cardOpaqueId}`,
+    text: `Checkout OK · ${paid.amount ?? price} ${config.tokenSymbol} · order ${paid.orderId ?? orderId}`,
   });
   return { steps, mandate, receipt };
 }

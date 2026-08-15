@@ -125,7 +125,7 @@ async function publishStore(
   return {
     status: "published",
     store,
-    reply: `The store is now live. Agents can read the product details at /s/${store.slug}/llms.txt. There ${store.skus.length === 1 ? "is" : "are"} ${store.skus.length} SKU${store.skus.length === 1 ? "" : "s"} priced in ${config.tokenSymbol}. Payouts go to ${store.merchantAddress}.`,
+    reply: `The store is now live. Agents can read /s/${store.slug}/llms.txt — and the shop is listed on /market and the network /llms.txt registry. There ${store.skus.length === 1 ? "is" : "are"} ${store.skus.length} SKU${store.skus.length === 1 ? "" : "s"} priced in ${config.tokenSymbol}. Payouts go to ${store.merchantAddress}.`,
     draft: null,
   };
 }

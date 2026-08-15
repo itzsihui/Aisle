@@ -21,8 +21,8 @@ const HANDSHAKE = [
   {
     n: "02",
     title: "Agents discover",
-    body: "Buyers fetch llms.txt and the agent card. Humans never need a shop UI.",
-    mono: "GET /s/{slug}/llms.txt",
+    body: "Listed on /market and the network /llms.txt. Agents match SKUs, then open the store card.",
+    mono: "GET /llms.txt → /s/{slug}",
     accent: "ember" as const,
   },
   {
@@ -56,6 +56,9 @@ export function LandingHome() {
               Aisle
             </span>
             <nav className="flex items-center gap-5 text-sm text-[var(--landing-fog)]/70">
+              <Link href="/market" className="hover:text-[var(--landing-fog)]">
+                Market
+              </Link>
               <Link href="/onboard" className="hover:text-[var(--landing-fog)]">
                 Open a store
               </Link>

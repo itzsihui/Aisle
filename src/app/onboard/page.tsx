@@ -44,7 +44,6 @@ export default function OnboardPage() {
   const [merchantAuth, setMerchantAuth] = useState<MerchantAuthProof | null>(
     null,
   );
-  const [starterUsed, setStarterUsed] = useState(false);
   const [storeUrl, setStoreUrl] = useState("");
 
   const merchantAddress = merchantAuth?.address ?? null;
@@ -76,7 +75,6 @@ export default function OnboardPage() {
       if (saved?.address && saved.signature && saved.message) {
         setMerchantAuth(saved);
       }
-      if ((session.onboard.lines?.length ?? 0) > 1) setStarterUsed(true);
     }
     setHydrated(true);
   }, []);
@@ -234,7 +232,6 @@ export default function OnboardPage() {
 
   async function applyAuth(proof: MerchantAuthProof) {
     setMerchantAuth(proof);
-    setStarterUsed(true);
 
     const nextPrices = draft
       ? draft.lines.map((l, i) => prices[i] || l.price || "")
@@ -278,7 +275,6 @@ export default function OnboardPage() {
   }
 
   async function onConnectWallet() {
-    setStarterUsed(true);
     try {
       const proof = await authenticateWithMetaMask();
       await applyAuth(proof);
@@ -297,9 +293,8 @@ export default function OnboardPage() {
   }
 
   function onStarter(action: StarterAction) {
-    setStarterUsed(true);
     if (action === "describe") {
-      setMessage("i wanna set up a phone store, 5 iphones, 5 samsungs");
+      setMessage("");
       setLines((prev) => [
         ...prev,
         {
@@ -314,7 +309,7 @@ export default function OnboardPage() {
         ...prev,
         {
           role: "aisle",
-          text: "Drop a CSV with title, description, quantity, price. Quote any description that contains commas.",
+          text: "Choose a CSV with title, description, quantity, price. Quote any description that contains commas.",
         },
       ]);
       return;
@@ -329,14 +324,19 @@ export default function OnboardPage() {
       ]);
       return;
     }
-    void onConnectWallet();
+    setLines((prev) => [
+      ...prev,
+      {
+        role: "aisle",
+        text: "Connect MetaMask to set your x402 payout address. Approve the popup, switch to Avalanche Fuji if asked, then sign — no funds move.",
+      },
+    ]);
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     const text = message.trim();
     if (!text) return;
-    setStarterUsed(true);
     setLines((prev) => [...prev, { role: "merchant", text }]);
     setMessage("");
     await callAgent({ message: text, draft });
@@ -344,7 +344,6 @@ export default function OnboardPage() {
 
   async function onFile(file: File) {
     const csv = await file.text();
-    setStarterUsed(true);
     setDraft(null);
     setPrices([]);
     setQuantities([]);
@@ -358,7 +357,6 @@ export default function OnboardPage() {
   async function onImportUrl() {
     const url = storeUrl.trim();
     if (!url) return;
-    setStarterUsed(true);
     setDraft(null);
     setPrices([]);
     setQuantities([]);
@@ -402,8 +400,7 @@ export default function OnboardPage() {
         setBusy(true);
         proof = await authenticateWithMetaMask();
         setMerchantAuth(proof);
-        setStarterUsed(true);
-        setLines((prev) => [
+            setLines((prev) => [
           ...prev,
           {
             role: "merchant",
@@ -442,6 +439,7 @@ export default function OnboardPage() {
             </h1>
             <p className="mt-0.5 text-xs text-foreground/55">
               Chat, CSV, or Shopify URL → confirm prices → wallet → publish.
+              Listed on <span className="font-mono">/market</span>.
             </p>
           </div>
           <div className="min-h-0 flex-1 bg-background">
@@ -459,7 +457,6 @@ export default function OnboardPage() {
               walletAuthenticated={Boolean(merchantAuth)}
               onConnectWallet={onConnectWallet}
               onStarter={onStarter}
-              showStarterActions={!starterUsed && lines.length <= 1}
               belowMessages={
                 draft ? (
                   <PriceDraftForm

@@ -17,9 +17,10 @@ export async function runBuyerAgent(args: {
 }> {
   const bedrock = await converseWithTools({
     system: `You are a buyer agent for Aisle. Never scrape HTML. Always call pay_x402 with the user message.
-Extract the store slug and the product they want (e.g. "earring", "shirt") into the tool args.
-The tool performs: GET llms.txt → GET catalog.json → match product → POST /buy (expect HTTP 402) → Avalanche XSGD transfer → retry with PAYMENT-SIGNATURE → HTTP 200.
-If the product is not in the catalog, the tool errors — do not invent SKUs. Reply in one short sentence after the tool runs.`,
+Extract the store slug if they named /s/{slug}, and the product they want (e.g. "earring", "shirt") into the tool args.
+If there is no slug, omit slug — the tool searches the Aisle network registry (/registry.json) and matches the product across shops.
+The tool performs: resolve store (slug or registry) → GET llms.txt → GET catalog.json → POST /buy (expect HTTP 402) → Avalanche XSGD transfer → retry with PAYMENT-SIGNATURE → HTTP 200.
+If the product is not found, the tool errors — do not invent SKUs. Reply in one short sentence after the tool runs.`,
     userMessage: args.message,
     tools: [
       toolSpec(

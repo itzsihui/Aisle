@@ -1,7 +1,7 @@
 "use client";
 
-import { FormEvent, useRef, type ReactNode } from "react";
-import { Paperclip, Wallet } from "lucide-react";
+import { FormEvent, useRef, useState, type ReactNode } from "react";
+import { ArrowLeft, Paperclip, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,6 +16,64 @@ export type ChatLine = {
 };
 
 export type StarterAction = "describe" | "import" | "url" | "wallet";
+
+export type ComposerMode = "choose" | StarterAction;
+
+function ChoiceButtons({
+  busy,
+  onPick,
+  compact,
+}: {
+  busy: boolean;
+  onPick: (action: StarterAction) => void;
+  compact?: boolean;
+}) {
+  const cls = compact ? "h-8 text-xs" : "h-9 text-sm";
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        className={cls}
+        onClick={() => onPick("describe")}
+      >
+        Add product
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        className={cls}
+        onClick={() => onPick("import")}
+      >
+        Import CSV
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        className={cls}
+        onClick={() => onPick("url")}
+      >
+        Store URL
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        className={cls}
+        onClick={() => onPick("wallet")}
+      >
+        Connect MetaMask
+      </Button>
+    </div>
+  );
+}
 
 export function MerchantChat({
   lines,
@@ -32,7 +90,6 @@ export function MerchantChat({
   walletAuthenticated,
   onConnectWallet,
   onStarter,
-  showStarterActions,
 }: {
   lines: ChatLine[];
   message: string;
@@ -48,9 +105,18 @@ export function MerchantChat({
   walletAuthenticated?: boolean;
   onConnectWallet?: () => void;
   onStarter?: (action: StarterAction) => void;
-  showStarterActions?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<ComposerMode>("choose");
+
+  function pick(action: StarterAction) {
+    setMode(action);
+    onStarter?.(action);
+  }
+
+  function backToChoose() {
+    setMode("choose");
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -65,17 +131,19 @@ export function MerchantChat({
               {shortAddress(merchantAddress)} · Fuji
             </span>
           ) : null}
-          <Button
-            type="button"
-            variant={walletAuthenticated ? "outline" : "default"}
-            size="sm"
-            disabled={busy}
-            onClick={onConnectWallet}
-            className="h-8 gap-1.5 text-xs"
-          >
-            <Wallet className="size-3.5" />
-            {walletAuthenticated ? "Re-auth MetaMask" : "Sign in with MetaMask"}
-          </Button>
+          {walletAuthenticated ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              onClick={onConnectWallet}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <Wallet className="size-3.5" />
+              Re-auth MetaMask
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -92,51 +160,9 @@ export function MerchantChat({
                   <span className="text-foreground/45"> · {line.llm}</span>
                 ) : null}
               </p>
-              {showStarterActions && index === 0 && line.role === "aisle" ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    className="h-8 text-xs"
-                    onClick={() => onStarter?.("describe")}
-                  >
-                    Add product
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    className="h-8 text-xs"
-                    onClick={() => {
-                      onStarter?.("import");
-                      fileRef.current?.click();
-                    }}
-                  >
-                    Import CSV
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    className="h-8 text-xs"
-                    onClick={() => onStarter?.("url")}
-                  >
-                    Store URL
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={busy}
-                    className="h-8 text-xs"
-                    onClick={() => onStarter?.("wallet")}
-                  >
-                    Connect MetaMask
-                  </Button>
+              {mode === "choose" && index === 0 && line.role === "aisle" ? (
+                <div className="mt-3">
+                  <ChoiceButtons busy={busy} onPick={pick} compact />
                 </div>
               ) : null}
             </div>
@@ -144,87 +170,136 @@ export function MerchantChat({
         </div>
       </ScrollArea>
       {belowMessages}
-      <form
-        onSubmit={onSubmit}
-        className="shrink-0 border-t border-border bg-background/90 p-4"
-      >
-        {!walletAuthenticated ? (
-          <div className="mb-3 flex flex-col gap-2 rounded-md border border-dashed border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+
+      <div className="shrink-0 border-t border-border bg-background/90 p-4">
+        {mode === "choose" ? (
+          <div className="flex flex-col gap-3">
             <p className="text-xs text-foreground/55">
-              Sign in with MetaMask to set your x402 payout address (Avalanche
-              Fuji). You&apos;ll approve connect, then sign a message — no
-              funds move.
+              Choose how you want to add products
             </p>
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              className="shrink-0"
-              onClick={onConnectWallet}
-            >
-              <Wallet className="size-3.5" />
-              Sign in with MetaMask
-            </Button>
+            <ChoiceButtons busy={busy} onPick={pick} />
           </div>
-        ) : null}
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            value={storeUrl ?? ""}
-            onChange={(event) => setStoreUrl?.(event.target.value)}
-            placeholder="Shopify store URL… e.g. your-store.myshopify.com"
-            disabled={busy}
-            className="text-xs"
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") return;
-              event.preventDefault();
-              if ((storeUrl ?? "").trim()) onImportUrl?.();
-            }}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy || !(storeUrl ?? "").trim()}
-            className="shrink-0"
-            onClick={() => onImportUrl?.()}
-          >
-            Import URL
-          </Button>
-        </div>
-        <Textarea
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          placeholder="Ask anything… e.g. phone store with 5 iPhones and 5 Samsungs"
-          rows={3}
-          className="resize-none"
-        />
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button type="submit" disabled={busy || !message.trim()}>
-            {busy ? "Working…" : "Send"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            disabled={busy}
-            className="size-9"
-            aria-label="Attach CSV"
-            onClick={() => fileRef.current?.click()}
-          >
-            <Paperclip className="size-4" />
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,.txt,.tsv"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onFile(file);
-              event.target.value = "";
-            }}
-          />
-        </div>
-      </form>
+        ) : (
+          <form onSubmit={onSubmit} className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                className="h-8 gap-1.5 px-2 text-xs text-foreground/70"
+                onClick={backToChoose}
+              >
+                <ArrowLeft className="size-3.5" />
+                Back
+              </Button>
+              <p className="text-xs font-medium text-foreground/60">
+                {mode === "describe"
+                  ? "Add product"
+                  : mode === "import"
+                    ? "Import CSV"
+                    : mode === "url"
+                      ? "Store URL"
+                      : "Connect MetaMask"}
+              </p>
+            </div>
+
+            {mode === "describe" ? (
+              <>
+                <Textarea
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  placeholder='e.g. "phone store with 5 iPhones and 5 Samsungs"'
+                  rows={3}
+                  className="resize-none"
+                  autoFocus
+                />
+                <Button type="submit" disabled={busy || !message.trim()}>
+                  {busy ? "Working…" : "Send"}
+                </Button>
+              </>
+            ) : null}
+
+            {mode === "import" ? (
+              <>
+                <p className="text-xs text-foreground/55">
+                  CSV columns: title, description, quantity, price. Quote any
+                  description that contains commas.
+                </p>
+                <Button
+                  type="button"
+                  disabled={busy}
+                  className="w-fit gap-2"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Paperclip className="size-4" />
+                  {busy ? "Uploading…" : "Choose CSV file"}
+                </Button>
+              </>
+            ) : null}
+
+            {mode === "url" ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={storeUrl ?? ""}
+                  onChange={(event) => setStoreUrl?.(event.target.value)}
+                  placeholder="Shopify store URL… e.g. your-store.myshopify.com"
+                  disabled={busy}
+                  className="text-xs"
+                  autoFocus
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter") return;
+                    event.preventDefault();
+                    if ((storeUrl ?? "").trim()) onImportUrl?.();
+                  }}
+                />
+                <Button
+                  type="button"
+                  disabled={busy || !(storeUrl ?? "").trim()}
+                  className="shrink-0"
+                  onClick={() => onImportUrl?.()}
+                >
+                  {busy ? "Importing…" : "Import URL"}
+                </Button>
+              </div>
+            ) : null}
+
+            {mode === "wallet" ? (
+              <div className="flex flex-col gap-3 rounded-md border border-dashed border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-foreground/55">
+                  {walletAuthenticated
+                    ? `Signed in as ${shortAddress(merchantAddress ?? "")}. You can re-auth or go back to add products.`
+                    : "Approve connect in MetaMask, switch to Avalanche Fuji if asked, then sign — no funds move. That address becomes your x402 payTo."}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={busy}
+                  className="shrink-0 gap-1.5"
+                  onClick={onConnectWallet}
+                >
+                  <Wallet className="size-3.5" />
+                  {walletAuthenticated
+                    ? "Re-auth MetaMask"
+                    : "Sign in with MetaMask"}
+                </Button>
+              </div>
+            ) : null}
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.txt,.tsv"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onFile(file);
+                event.target.value = "";
+              }}
+            />
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -275,7 +350,7 @@ export function PriceDraftForm({
           >
             <Input
               inputMode="numeric"
-              placeholder="100"
+              placeholder="qty"
               value={quantities[index] ?? ""}
               onChange={(event) => {
                 const next = [...quantities];
