@@ -146,13 +146,7 @@ export function MarketClient() {
         mode === "human" ? "bg-[#f6f3ee]" : "bg-neutral-950",
       )}
     >
-      <SiteHeader
-        className={
-          mode === "agent"
-            ? "border-neutral-800 bg-neutral-950/90 text-neutral-100"
-            : undefined
-        }
-      />
+      <SiteHeader tone={mode === "agent" ? "dark" : "light"} />
 
       {mode === "human" ? (
         <main className="mx-auto max-w-[1200px] px-5 pt-24 pb-20 md:px-8">
