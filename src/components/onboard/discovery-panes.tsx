@@ -192,7 +192,7 @@ export function EndpointLab({
           disabled={!slug || busy}
           onClick={testBuy}
         >
-          {busy ? "Testing…" : "Test buy"}
+          {busy ? "Testing…" : "Test x402 endpoint"}
         </Button>
       </div>
       <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr]">
@@ -222,7 +222,7 @@ export function EndpointLab({
             )}
           >
             {!result
-              ? "// Press Test buy — expect HTTP 402 Payment Required\n// (payment challenge JSON, no signature yet)."
+              ? "// Press Test x402 endpoint — expect HTTP 402 Payment Required\n// (payment challenge JSON, no signature yet)."
               : `// HTTP ${result.status}\n${result.body}`}
           </pre>
         </ScrollArea>

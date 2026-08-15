@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
 import {
   MerchantChat,
@@ -15,22 +15,54 @@ import {
   normalizeDraft,
   type MerchantDraft,
 } from "@/lib/inventory/parse";
+import {
+  DEFAULT_ONBOARD_LINES,
+  DEFAULT_ONBOARD_MESSAGE,
+  defaultBuyerPrompt,
+  readDemoSession,
+  storeRefFromPublish,
+  writeDemoSession,
+} from "@/lib/demo-session";
 
 export default function OnboardPage() {
-  const [message, setMessage] = useState(
-    "i wanna set up a clothing store, 5 shirts 5 jeans, 10 socks",
-  );
-  const [lines, setLines] = useState<ChatLine[]>([
-    {
-      role: "aisle",
-      text: "Describe inventory (or drop a CSV). I'll extract products, ask for XSGD prices, then publish llms.txt + agent.json for buying agents.",
-    },
-  ]);
+  const [hydrated, setHydrated] = useState(false);
+  const [message, setMessage] = useState(DEFAULT_ONBOARD_MESSAGE);
+  const [lines, setLines] = useState<ChatLine[]>(DEFAULT_ONBOARD_LINES);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<MerchantDraft | null>(null);
   const [prices, setPrices] = useState<string[]>([]);
   const [slug, setSlug] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const session = readDemoSession();
+    if (session.onboard) {
+      setMessage(session.onboard.message || DEFAULT_ONBOARD_MESSAGE);
+      setLines(
+        session.onboard.lines?.length
+          ? session.onboard.lines
+          : DEFAULT_ONBOARD_LINES,
+      );
+      setDraft(normalizeDraft(session.onboard.draft));
+      setPrices(session.onboard.prices ?? []);
+      setSlug(session.onboard.slug);
+      if (session.onboard.slug) setRefreshKey((k) => k + 1);
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeDemoSession({
+      onboard: {
+        message,
+        lines,
+        draft,
+        prices,
+        slug,
+      },
+    });
+  }, [hydrated, message, lines, draft, prices, slug]);
 
   async function callAgent(payload: {
     message?: string;
@@ -48,7 +80,11 @@ export default function OnboardPage() {
       const raw = await res.text();
       let data: {
         reply: string;
-        store: { slug: string } | null;
+        store: {
+          slug: string;
+          name?: string;
+          skus?: Array<{ title: string }>;
+        } | null;
         status?: "published" | "need_price" | "clarify";
         draft?: MerchantDraft | null;
         llm?: string;
@@ -66,16 +102,25 @@ export default function OnboardPage() {
         data.reply = "No reply from merchant agent.";
       }
       const nextDraft =
-        data.status === "need_price"
-          ? normalizeDraft(data.draft)
-          : null;
+        data.status === "need_price" ? normalizeDraft(data.draft) : null;
       setDraft(nextDraft);
-      setPrices(
-        nextDraft ? nextDraft.lines.map(() => "") : [],
-      );
+      setPrices(nextDraft ? nextDraft.lines.map(() => "") : []);
       if (data.store?.slug) {
         setSlug(data.store.slug);
         setRefreshKey((k) => k + 1);
+        const ref = storeRefFromPublish(data.store);
+        writeDemoSession({
+          lastStore: ref,
+          buyer: {
+            input: defaultBuyerPrompt(ref),
+            lines: readDemoSession().buyer?.lines ?? [
+              {
+                role: "agent",
+                text: "Buyer agent ready. I will read llms.txt / agent.json, not HTML.",
+              },
+            ],
+          },
+        });
       }
       setLines((prev) => [
         ...prev,

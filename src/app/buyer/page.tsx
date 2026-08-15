@@ -1,12 +1,18 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { ProtocolLog } from "@/components/marketing/protocol-log";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DEFAULT_BUYER_LINES,
+  defaultBuyerPrompt,
+  readDemoSession,
+  writeDemoSession,
+} from "@/lib/demo-session";
 
 type Line = { role: string; text: string };
 
@@ -15,17 +21,37 @@ function isUrl(text: string) {
 }
 
 export default function BuyerPage() {
-  const [buyerInput, setBuyerInput] = useState(
-    "Agent, go to /s/hackathon-shirts and buy a hackathon shirt.",
-  );
-  const [buyerLines, setBuyerLines] = useState<Line[]>([
-    {
-      role: "agent",
-      text: "Buyer agent ready. I will read llms.txt / agent.json, not HTML.",
-    },
-  ]);
+  const [hydrated, setHydrated] = useState(false);
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
+  const [buyerInput, setBuyerInput] = useState(defaultBuyerPrompt(null));
+  const [buyerLines, setBuyerLines] = useState<Line[]>(DEFAULT_BUYER_LINES);
   const [busy, setBusy] = useState<"buyer" | "card" | null>(null);
   const [snowtrace, setSnowtrace] = useState<string | null>(null);
+
+  useEffect(() => {
+    const session = readDemoSession();
+    const store = session.lastStore ?? null;
+    setStoreSlug(store?.slug ?? null);
+    if (session.buyer?.input) {
+      setBuyerInput(session.buyer.input);
+    } else {
+      setBuyerInput(defaultBuyerPrompt(store));
+    }
+    if (session.buyer?.lines?.length) {
+      setBuyerLines(session.buyer.lines);
+    }
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    writeDemoSession({
+      buyer: {
+        input: buyerInput,
+        lines: buyerLines,
+      },
+    });
+  }, [hydrated, buyerInput, buyerLines]);
 
   async function runBuyer(event?: FormEvent) {
     event?.preventDefault();
@@ -84,13 +110,17 @@ export default function BuyerPage() {
         text: "Pay with StraitsX scoped virtual card (spend cap · merchant whitelist · burn).",
       },
     ]);
+    const merchant =
+      storeSlug ||
+      buyerInput.match(/\/s\/([a-z0-9-]+)/i)?.[1] ||
+      "hackathon-shirts";
     try {
       const res = await fetch("/api/card-mandate", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           checkout: true,
-          merchant: "hackathon-shirts",
+          merchant,
           message: buyerInput,
         }),
       });
@@ -136,6 +166,16 @@ export default function BuyerPage() {
             <p className="mt-2 max-w-[52ch] text-foreground/70">
               Separate from merchant setup. Reads agent discovery docs, pays via
               Avalanche x402 or StraitsX scoped card.
+              {storeSlug ? (
+                <>
+                  {" "}
+                  Using last published store{" "}
+                  <span className="font-mono text-foreground/85">
+                    /s/{storeSlug}
+                  </span>
+                  .
+                </>
+              ) : null}
             </p>
           </div>
           <Link
