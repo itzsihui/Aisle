@@ -1,5 +1,6 @@
 import type { Sku, StoreRecord } from "@/lib/store/types";
 import { config } from "@/lib/config";
+import Papa from "papaparse";
 
 export type ParsedInventory = {
   name: string;
@@ -430,52 +431,131 @@ export function resolveMerchantTurn(args: {
 }
 
 export function parseCsv(csv: string): InventoryParseResult {
-  const lines = csv
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (lines.length === 0) {
+  const parsed = Papa.parse<Record<string, string>>(csv.trim(), {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim().toLowerCase(),
+  });
+
+  // Headerless fallback: title,quantity,price
+  if (
+    parsed.meta.fields?.length === 1 ||
+    !parsed.meta.fields?.some((f) =>
+      /title|name|price|qty|quantity/.test(f),
+    )
+  ) {
+    return parseCsvHeaderless(csv);
+  }
+
+  if (parsed.data.length === 0) {
     return parseMerchantPrompt("50 shirts for 50 XSGD");
   }
-  const header = lines[0].toLowerCase();
-  const hasHeader = /title|name|price|qty|quantity/.test(header);
-  const rows = hasHeader ? lines.slice(1) : lines;
+
+  const skus: Omit<Sku, "id">[] = [];
+  const missingLines: MerchantDraftLine[] = [];
+  let storeHint: string | undefined;
+
+  for (const record of parsed.data) {
+    const title = String(record.title || record.name || "").trim() || "Untitled";
+    const quantity = Number(record.quantity || record.qty || 1);
+    const priceRaw = record.price || record.xsgd;
+    const priceNum = Number(String(priceRaw ?? "").replace(/[^\d.]/g, ""));
+    const qtyOk = Number.isFinite(quantity) && quantity > 0;
+    const priceOk = Number.isFinite(priceNum) && priceNum > 0;
+
+    if (!qtyOk || !priceOk) {
+      missingLines.push({
+        quantity: qtyOk ? quantity : 1,
+        title,
+        name: title,
+      });
+      continue;
+    }
+
+    skus.push({
+      title,
+      description: String(record.description || title).trim(),
+      quantity,
+      price: priceNum.toFixed(2),
+    });
+  }
+
+  if (missingLines.length > 0) {
+    // Prefer asking for every line so the merchant can confirm the full catalog
+    const draftLines =
+      skus.length > 0
+        ? [
+            ...skus.map((s) => ({
+              quantity: s.quantity,
+              title: s.title,
+              name: s.title,
+            })),
+            ...missingLines,
+          ]
+        : missingLines;
+    const draft = draftFromLines(draftLines, storeHint);
+    return {
+      ok: false,
+      missing: "price",
+      draft,
+      ask: `${priceAsk(draft)} (CSV had missing or invalid prices — fill them below.)`,
+    };
+  }
+
+  if (skus.length === 0) {
+    return {
+      ok: false,
+      missing: "inventory",
+      draft: null,
+      ask: "That CSV had no products. Use columns title, description, quantity, price.",
+    };
+  }
+
+  const name =
+    storeHint ||
+    (skus.length === 1
+      ? skus[0].title.replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Aisle Store");
+  return {
+    ok: true,
+    inventory: { name, slug: slugify(name), skus },
+  };
+}
+
+function parseCsvHeaderless(csv: string): InventoryParseResult {
+  const parsed = Papa.parse<string[]>(csv.trim(), {
+    header: false,
+    skipEmptyLines: true,
+  });
   const skus: Omit<Sku, "id">[] = [];
   const missingLines: MerchantDraftLine[] = [];
 
-  for (const row of rows) {
-    const cols = row.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-    if (hasHeader) {
-      const keys = header.split(",").map((k) => k.trim());
-      const record = Object.fromEntries(keys.map((k, i) => [k, cols[i] ?? ""]));
-      const priceRaw = record.price || record.xsgd;
-      const title = record.title || record.name || "Untitled";
-      const quantity = Number(record.quantity || record.qty || 1);
-      if (!priceRaw || !Number.isFinite(Number(priceRaw))) {
-        missingLines.push({ quantity, title, name: title });
-        continue;
-      }
-      skus.push({
-        title,
-        description: record.description || record.title || "",
-        quantity,
-        price: Number(priceRaw).toFixed(2),
-      });
-    } else {
-      const title = cols[0] || "Untitled";
-      const quantity = Number(cols[1] || 1);
-      const priceRaw = cols[2];
-      if (!priceRaw || !Number.isFinite(Number(priceRaw))) {
-        missingLines.push({ quantity, title, name: title });
-        continue;
-      }
-      skus.push({
-        title,
-        description: cols[0] || "",
-        quantity,
-        price: Number(priceRaw).toFixed(2),
-      });
+  for (const cols of parsed.data) {
+    if (!cols?.length) continue;
+    // Skip accidental header row
+    if (/^title$/i.test(String(cols[0])) && /price/i.test(String(cols[2] ?? cols[3] ?? ""))) {
+      continue;
     }
+    const title = String(cols[0] || "Untitled").trim();
+    const quantity = Number(cols[1] || 1);
+    const priceRaw = cols[2];
+    const priceNum = Number(String(priceRaw ?? "").replace(/[^\d.]/g, ""));
+    const qtyOk = Number.isFinite(quantity) && quantity > 0;
+    const priceOk = Number.isFinite(priceNum) && priceNum > 0;
+    if (!qtyOk || !priceOk) {
+      missingLines.push({
+        quantity: qtyOk ? quantity : 1,
+        title,
+        name: title,
+      });
+      continue;
+    }
+    skus.push({
+      title,
+      description: title,
+      quantity,
+      price: priceNum.toFixed(2),
+    });
   }
 
   if (missingLines.length > 0) {
@@ -484,11 +564,23 @@ export function parseCsv(csv: string): InventoryParseResult {
       ok: false,
       missing: "price",
       draft,
-      ask: priceAsk(draft),
+      ask: `${priceAsk(draft)} (CSV had missing or invalid prices — fill them below.)`,
     };
   }
 
-  const name = skus[0]?.title || "Aisle Store";
+  if (skus.length === 0) {
+    return {
+      ok: false,
+      missing: "inventory",
+      draft: null,
+      ask: "That CSV had no products. Use title,quantity,price or a header row.",
+    };
+  }
+
+  const name =
+    skus.length === 1
+      ? skus[0].title.replace(/\b\w/g, (c) => c.toUpperCase())
+      : "Aisle Store";
   return { ok: true, inventory: { name, slug: slugify(name), skus } };
 }
 
@@ -501,12 +593,25 @@ export function toStore(
     name: parsed.name,
     merchantAddress,
     createdAt: new Date().toISOString(),
-    skus: parsed.skus.map((sku, index) => ({
-      id:
-        parsed.slug === "hackathon-shirts"
-          ? "shirt"
-          : slugify(sku.title) || `sku-${index + 1}`,
-      ...sku,
-    })),
+    skus: parsed.skus.map((sku, index) => {
+      const quantity = Number(sku.quantity);
+      const priceNum = Number(sku.price);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        throw new Error(`Invalid quantity for ${sku.title}`);
+      }
+      if (!Number.isFinite(priceNum) || priceNum <= 0) {
+        throw new Error(`Invalid price for ${sku.title}`);
+      }
+      return {
+        id:
+          parsed.slug === "hackathon-shirts"
+            ? "shirt"
+            : slugify(sku.title) || `sku-${index + 1}`,
+        title: sku.title,
+        description: sku.description,
+        quantity,
+        price: priceNum.toFixed(2),
+      };
+    }),
   };
 }
