@@ -157,11 +157,14 @@ export default function OnboardPage() {
 
   async function onFile(file: File) {
     const csv = await file.text();
+    // CSV replaces any pending chat draft (phone-store prices form, etc.)
+    setDraft(null);
+    setPrices([]);
     setLines((prev) => [
       ...prev,
       { role: "merchant", text: `Uploaded ${file.name}` },
     ]);
-    await callAgent({ csv });
+    await callAgent({ csv, draft: null });
   }
 
   async function onSubmitPrices() {

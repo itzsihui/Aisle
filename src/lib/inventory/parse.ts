@@ -457,11 +457,19 @@ export function parseCsv(csv: string): InventoryParseResult {
 
   for (const record of parsed.data) {
     const title = String(record.title || record.name || "").trim() || "Untitled";
-    const quantity = Number(record.quantity || record.qty || 1);
+    // Unquoted commas in description shift columns → __parsed_extra + garbage qty
+    const misaligned = Array.isArray(
+      (record as { __parsed_extra?: unknown }).__parsed_extra,
+    );
+    const quantity = Number(
+      String(record.quantity ?? record.qty ?? "").trim() || NaN,
+    );
     const priceRaw = record.price || record.xsgd;
     const priceNum = Number(String(priceRaw ?? "").replace(/[^\d.]/g, ""));
-    const qtyOk = Number.isFinite(quantity) && quantity > 0;
-    const priceOk = Number.isFinite(priceNum) && priceNum > 0;
+    const qtyOk =
+      !misaligned && Number.isFinite(quantity) && quantity > 0;
+    const priceOk =
+      !misaligned && Number.isFinite(priceNum) && priceNum > 0;
 
     if (!qtyOk || !priceOk) {
       missingLines.push({
