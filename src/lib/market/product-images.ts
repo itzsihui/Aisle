@@ -60,8 +60,8 @@ const BY_TITLE: Array<{ match: RegExp; src: string }> = [
     src: "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=800&h=800&fit=crop&auto=format",
   },
   {
-    match: /jean|denim|pant/i,
-    src: "https://images.unsplash.com/photo-1542272454315-7f6b6f6608a1?w=800&h=800&fit=crop&auto=format",
+    match: /jeans?|denim|pants?/i,
+    src: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&h=800&fit=crop&auto=format",
   },
 ];
 
