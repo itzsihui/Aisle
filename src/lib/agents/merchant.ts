@@ -1,32 +1,78 @@
-import { createStoreTool } from "@/lib/agents/tools-merchant";
+import { createStoreTool, importStoreFromUrl } from "@/lib/agents/tools-merchant";
 import { converseWithTools, toolSpec } from "@/lib/bedrock/converse";
 import {
   normalizeDraft,
   type MerchantDraft,
 } from "@/lib/inventory/parse";
 import type { StoreRecord } from "@/lib/store/types";
+import type { MerchantAuthProof } from "@/lib/wallet/ethereum";
 
 export type { MerchantDraft };
+
+export type MerchantAgentStatus =
+  | "published"
+  | "need_price"
+  | "need_wallet"
+  | "clarify";
 
 export async function runMerchantAgent(args: {
   message?: string;
   csv?: string;
+  url?: string;
   draft?: MerchantDraft | null;
   prices?: Array<string | number | null | undefined>;
+  merchantAuth?: MerchantAuthProof | null;
 }): Promise<{
   store: StoreRecord | null;
   reply: string;
-  status: "published" | "need_price" | "clarify";
+  status: MerchantAgentStatus;
   draft?: MerchantDraft | null;
   llm?: "bedrock" | "deterministic";
 }> {
   const draft = normalizeDraft(args.draft);
+  const merchantAuth = args.merchantAuth;
 
   // Structured price-form submit — skip Bedrock
   if (draft && args.prices && args.prices.length > 0) {
     const priced = await createStoreTool({
       draft,
       prices: args.prices,
+      merchantAuth,
+    });
+    return {
+      store: priced.store,
+      status: priced.status,
+      reply: priced.reply,
+      draft: priced.draft,
+      llm: "deterministic",
+    };
+  }
+
+  // Shopify storefront URL — deterministic import + price confirm
+  if (args.url?.trim()) {
+    const imported = await importStoreFromUrl(args.url.trim());
+    return {
+      store: imported.store,
+      status: imported.status,
+      reply: imported.reply,
+      draft: imported.draft,
+      llm: "deterministic",
+    };
+  }
+
+  // Wallet connected after priced catalog — republish from draft line prices
+  if (
+    draft &&
+    merchantAuth &&
+    draft.lines.every((l) => l.price) &&
+    !args.message?.trim() &&
+    !args.csv?.trim() &&
+    !args.url?.trim()
+  ) {
+    const priced = await createStoreTool({
+      draft,
+      prices: draft.lines.map((l) => l.price),
+      merchantAuth,
     });
     return {
       store: priced.store,
@@ -42,22 +88,19 @@ export async function runMerchantAgent(args: {
     const pricedFollowUp = await createStoreTool({
       message: args.message,
       draft,
+      merchantAuth,
     });
-    if (pricedFollowUp.status === "published") {
+    if (
+      pricedFollowUp.status === "published" ||
+      pricedFollowUp.status === "need_price" ||
+      pricedFollowUp.status === "need_wallet"
+    ) {
       return {
         store: pricedFollowUp.store,
         status: pricedFollowUp.status,
         reply: pricedFollowUp.reply,
-        draft: null,
-        llm: "deterministic",
-      };
-    }
-    if (pricedFollowUp.status === "need_price") {
-      return {
-        store: null,
-        status: "need_price",
-        reply: pricedFollowUp.reply,
-        draft: pricedFollowUp.draft,
+        draft:
+          pricedFollowUp.status === "published" ? null : pricedFollowUp.draft,
         llm: "deterministic",
       };
     }
@@ -69,7 +112,11 @@ export async function runMerchantAgent(args: {
     "Create a store selling 50 StraitsX Hackathon Shirts for 1 XSGD each.";
 
   if (args.csv?.trim()) {
-    const csvResult = await createStoreTool({ csv: args.csv, draft });
+    const csvResult = await createStoreTool({
+      csv: args.csv,
+      draft: null,
+      merchantAuth,
+    });
     return {
       store: csvResult.store,
       status: csvResult.status,
@@ -97,7 +144,7 @@ Optional storeName if they named a store type (e.g. "clothing store").
 Also support single-SKU fields quantity/title/price for one product.
 
 Rules:
-- Greeting / chit-chat with no inventory → do NOT call create_store. Ask them to describe inventory.
+- Greeting / chit-chat with no inventory → do NOT call create_store. Ask them to describe inventory (or import CSV / paste a Shopify store URL / connect wallet).
 - Products without prices → call create_store with items (or quantity+title) and omit prices.
 - Full inventory with prices → include prices and publish.
 - If a pending draft is waiting and they reply with one number for a single-line draft, call create_store with that price.
@@ -174,6 +221,7 @@ Sponsors: StraitsX (XSGD), Avalanche (x402), AWS Bedrock.`,
             input.quantity !== undefined ? Number(input.quantity) : undefined,
           title: input.title ? String(input.title) : undefined,
           price: input.price !== undefined ? String(input.price) : undefined,
+          merchantAuth,
         });
         if (result.status === "published") {
           return {
@@ -220,10 +268,10 @@ Sponsors: StraitsX (XSGD), Avalanche (x402), AWS Bedrock.`,
       };
     }
 
-    if (tool?.status === "need_price") {
+    if (tool?.status === "need_price" || tool?.status === "need_wallet") {
       return {
         store: null,
-        status: "need_price",
+        status: tool.status,
         reply: String(tool.ask || tool.reply || bedrock.text),
         draft: normalizeDraft(tool.draft) ?? draft,
         llm: "bedrock",
@@ -255,6 +303,7 @@ Sponsors: StraitsX (XSGD), Avalanche (x402), AWS Bedrock.`,
     message: args.message,
     csv: args.csv,
     draft,
+    merchantAuth,
   });
   const note =
     bedrock.ok === false

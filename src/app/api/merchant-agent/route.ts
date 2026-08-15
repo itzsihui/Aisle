@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       message?: string;
       csv?: string;
+      url?: string;
       draft?:
         | MerchantDraft
         | {
@@ -22,12 +23,15 @@ export async function POST(request: Request) {
           }
         | null;
       prices?: Array<string | number | null | undefined>;
+      merchantAuth?: import("@/lib/wallet/ethereum").MerchantAuthProof | null;
     };
     const result = await runMerchantAgent({
       message: body.message,
       csv: body.csv,
+      url: body.url,
       draft: normalizeDraft(body.draft),
       prices: body.prices,
+      merchantAuth: body.merchantAuth,
     });
     return Response.json(result);
   } catch (error) {

@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Terminal } from "@/components/ui/terminal";
 import { TracingBeam } from "@/components/ui/tracing-beam";
 import { LandingLenis } from "@/components/landing/lenis-root";
 import { MetalHumanStage } from "@/components/landing/metal-human-stage";
@@ -171,6 +174,86 @@ export function LandingHome() {
                 ))}
               </div>
             </TracingBeam>
+          </div>
+        </section>
+
+        {/* Bob — why human storefronts miss the agent economy */}
+        <section
+          aria-label="Meet Bob"
+          className="relative overflow-hidden border-t border-white/10 bg-[#060908] px-6 py-24 md:px-10 md:py-32"
+        >
+          <div className="landing-grain pointer-events-none absolute inset-0 opacity-30" aria-hidden />
+          <div className="relative mx-auto grid max-w-[1400px] gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center lg:gap-16">
+            <Reveal>
+              <Badge
+                variant="outline"
+                className="rounded-md border-[var(--landing-ember)]/35 bg-transparent font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--landing-ember)]"
+              >
+                Meet Bob
+              </Badge>
+              <h2 className="mt-5 font-[family-name:var(--font-syne)] text-[clamp(1.75rem,4vw,2.85rem)] font-semibold leading-[1.1] tracking-tight text-[var(--landing-fog)]">
+                Bob had a beautiful shop.
+                <span className="mt-2 block text-[var(--landing-fog)]/45">
+                  Agents never walked in.
+                </span>
+              </h2>
+              <div className="mt-6 max-w-[42ch] space-y-4 text-base leading-relaxed text-[var(--landing-fog)]/60">
+                <p>
+                  Last year Bob shipped a polished ecommerce site. Humans loved
+                  it. Cart, checkout, CAPTCHA, the works.
+                </p>
+                <p>
+                  Then the buyers changed. Shopping agents hit his homepage,
+                  choked on HTML, and moved on to the next merchant. No
+                  <span className="font-mono text-[0.9em] text-[var(--landing-ember)]">
+                    {" "}
+                    llms.txt
+                  </span>
+                  . No machine catalog. No way to pay without a browser.
+                </p>
+                <p className="text-[var(--landing-fog)]/80">
+                  Every bounce was a sale he never saw. Invisible demand. Empty
+                  carts that never formed.
+                </p>
+              </div>
+              <Separator className="my-8 max-w-xs bg-white/10" />
+              <p className="max-w-[36ch] font-[family-name:var(--font-syne)] text-lg font-medium leading-snug text-[var(--landing-fog)]">
+                Aisle is how Bob opens the door. Agents discover, challenge,
+                settle — without a human checkout UI.
+              </p>
+              <Link
+                href="/onboard"
+                className="mt-8 inline-flex h-11 items-center rounded-md bg-[var(--landing-jade)] px-5 text-sm font-medium text-[var(--landing-ink)] transition-opacity hover:opacity-90 active:scale-[0.98]"
+              >
+                Don&apos;t be Bob&apos;s old site
+              </Link>
+            </Reveal>
+
+            <Reveal delay={0.12} className="landing-terminal-shell min-h-[300px] overflow-hidden rounded-lg p-1 lg:min-h-[360px]">
+              <Terminal
+                className="h-full max-w-none border-0 bg-transparent px-2 py-3 md:px-4"
+                username="agent"
+                enableSound={false}
+                typingSpeed={22}
+                commands={[
+                  "curl -s https://bobs-shop.com/ | head",
+                  "curl -s https://bobs-shop.com/llms.txt",
+                  "curl -s https://bobs-shop.com/buy",
+                ]}
+                outputs={{
+                  0: [
+                    "<!DOCTYPE html><html>…",
+                    "<!-- captcha · cart · cookie banner -->",
+                    "agent: cannot parse checkout UI",
+                  ],
+                  1: ["HTTP/1.1 404 Not Found", "agent: no discovery surface"],
+                  2: [
+                    "HTTP/1.1 405 Method Not Allowed",
+                    "agent: skipping merchant — next store",
+                  ],
+                }}
+              />
+            </Reveal>
           </div>
         </section>
 

@@ -1,27 +1,34 @@
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function SiteHeader() {
+export function SiteHeader({ className }: { className?: string }) {
   return (
-    <header className="absolute inset-x-0 top-0 z-20 h-16">
+    <header
+      className={cn(
+        "absolute inset-x-0 top-0 z-20 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md",
+        className,
+      )}
+    >
       <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between px-6">
-        <Link href="/" className="text-[15px] font-semibold tracking-tight">
+        <Link
+          href="/"
+          className="font-[family-name:var(--font-syne)] text-lg font-extrabold tracking-[-0.04em] text-foreground"
+        >
           Aisle
         </Link>
-        <nav className="flex items-center gap-6 text-sm">
-          <Link href="/onboard" className="text-foreground/70 hover:text-foreground">
+        <nav className="flex items-center gap-5 text-sm text-foreground/65">
+          <Link href="/onboard" className="hover:text-foreground">
             Open a store
           </Link>
-          <Link href="/buyer" className="text-foreground/70 hover:text-foreground">
+          <Link href="/buyer" className="hover:text-foreground">
             Buyer
           </Link>
-          <Link href="/demo" className="text-foreground/70 hover:text-foreground">
+          <Link href="/demo" className="hidden hover:text-foreground sm:inline">
             Handshake
           </Link>
           <Link
             href="/dashboard"
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
           >
             Ops
           </Link>

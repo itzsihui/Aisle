@@ -12,6 +12,10 @@ export type MerchantDraftLine = {
   quantity: number;
   title: string;
   name?: string;
+  /** Optional product blurb (e.g. from Shopify body_html). */
+  description?: string;
+  /** Set when inventory is priced but wallet is still missing. */
+  price?: string;
 };
 
 export type MerchantDraft = {
@@ -37,6 +41,8 @@ export function normalizeDraft(
         quantity: Number(line.quantity),
         title: String(line.title).trim(),
         name: line.name,
+        description: line.description,
+        price: line.price,
       })),
     };
   }
@@ -350,7 +356,7 @@ export function completeDraftWithPrices(
   const skus: Omit<Sku, "id">[] = [];
   for (let i = 0; i < normalized.lines.length; i++) {
     const line = normalized.lines[i];
-    const raw = prices[i];
+    const raw = prices[i] ?? line.price;
     const priceNum = Number(String(raw ?? "").replace(/[^\d.]/g, ""));
     if (!Number.isFinite(priceNum) || priceNum <= 0) {
       return {
@@ -364,7 +370,9 @@ export function completeDraftWithPrices(
     const isHackathon = /hackathon/i.test(line.title);
     skus.push({
       title: isHackathon ? "StraitsX Hackathon Shirt" : line.title,
-      description: `${line.quantity} ${line.title} for ${price} ${config.tokenSymbol}`,
+      description:
+        line.description?.trim() ||
+        `${line.quantity} ${line.title} for ${price} ${config.tokenSymbol}`,
       quantity: line.quantity,
       price,
     });

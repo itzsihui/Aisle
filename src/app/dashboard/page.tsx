@@ -51,19 +51,24 @@ export default function DashboardPage() {
       <SiteHeader />
       <div className="flex min-h-[100dvh] pt-16">
         <aside className="hidden w-56 shrink-0 border-r border-border bg-background p-6 md:block">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground">
-            MERCHANT OPS
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Merchant ops
           </p>
-          <nav className="mt-4 flex flex-col gap-3 text-sm">
-            <span>Orders</span>
+          <nav className="mt-4 flex flex-col gap-3 text-sm text-foreground/70">
+            <span className="text-foreground">Orders</span>
             <span>Inventory</span>
-            <Link href="/s/hackathon-shirts/llms.txt" className="text-primary">
+            <Link
+              href="/s/hackathon-shirts/llms.txt"
+              className="text-primary hover:underline"
+            >
               llms.txt
             </Link>
           </nav>
         </aside>
         <main className="flex-1 p-6">
-          <h1 className="text-2xl font-medium tracking-tight">Orders</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Orders
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {store
               ? `${store.name} · ${store.skus.length} SKUs`
@@ -73,7 +78,7 @@ export default function DashboardPage() {
               : ""}
           </p>
           {aws && (aws.table || aws.protocolBase) ? (
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 font-mono text-xs text-muted-foreground">
               AWS:{" "}
               {aws.protocolBase
                 ? `API Gateway live`

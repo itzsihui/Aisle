@@ -9,9 +9,15 @@ import {
   type MerchantDraftLine,
   type ParsedInventory,
 } from "@/lib/inventory/parse";
+import { importShopifyStore } from "@/lib/inventory/shopify";
 import { emit } from "@/lib/protocol/events";
 import { repo } from "@/lib/store/repo";
 import type { StoreRecord } from "@/lib/store/types";
+import {
+  verifyMerchantAuth,
+  type HexAddress,
+  type MerchantAuthProof,
+} from "@/lib/wallet/ethereum";
 
 export type MerchantToolResult =
   | {
@@ -25,6 +31,12 @@ export type MerchantToolResult =
       store: null;
       reply: string;
       draft: MerchantDraft;
+    }
+  | {
+      status: "need_wallet";
+      store: null;
+      reply: string;
+      draft: MerchantDraft | null;
     }
   | {
       status: "clarify";
@@ -70,8 +82,38 @@ function inventoryFromLines(
   };
 }
 
-async function publishStore(inventory: ParsedInventory): Promise<MerchantToolResult> {
-  const store = toStore(inventory, config.merchantAddress);
+function draftFromInventory(inventory: ParsedInventory): MerchantDraft {
+  return {
+    name: inventory.name,
+    slug: inventory.slug,
+    lines: inventory.skus.map((s) => ({
+      quantity: s.quantity,
+      title: s.title,
+      name: s.title,
+      description: s.description,
+      price: s.price,
+    })),
+  };
+}
+
+function needWalletResult(draft: MerchantDraft | null): MerchantToolResult {
+  return {
+    status: "need_wallet",
+    store: null,
+    reply: `Almost there — click Connect MetaMask. Approve the connection, switch to Avalanche Fuji if asked, then sign the message so we can set your x402 payTo. MetaMask authentication required (pasting an address isn't enough).`,
+    draft,
+  };
+}
+
+async function publishStore(
+  inventory: ParsedInventory,
+  merchantAuth?: MerchantAuthProof | null,
+): Promise<MerchantToolResult> {
+  const payTo = await verifyMerchantAuth(merchantAuth);
+  if (!payTo) {
+    return needWalletResult(draftFromInventory(inventory));
+  }
+  const store = toStore(inventory, payTo);
   await repo.putStore(store);
   emit({
     status: 200,
@@ -83,27 +125,53 @@ async function publishStore(inventory: ParsedInventory): Promise<MerchantToolRes
   return {
     status: "published",
     store,
-    reply: `The store is now live. Agents can read the product details at /s/${store.slug}/llms.txt. There ${store.skus.length === 1 ? "is" : "are"} ${store.skus.length} SKU${store.skus.length === 1 ? "" : "s"} priced in ${config.tokenSymbol}. The merchant can receive payments at ${store.merchantAddress}.`,
+    reply: `The store is now live. Agents can read the product details at /s/${store.slug}/llms.txt. There ${store.skus.length === 1 ? "is" : "are"} ${store.skus.length} SKU${store.skus.length === 1 ? "" : "s"} priced in ${config.tokenSymbol}. Payouts go to ${store.merchantAddress}.`,
     draft: null,
   };
 }
 
-function needPriceResult(draft: MerchantDraft): MerchantToolResult {
+function needPriceResult(
+  draft: MerchantDraft,
+  reply?: string,
+): MerchantToolResult {
   const list = draft.lines
     .map((l) => `${l.quantity} ${l.title}`)
     .join(", ");
   return {
     status: "need_price",
     store: null,
-    reply: `Got it — ${list}. Fill in ${config.tokenSymbol} prices below, then submit.`,
+    reply:
+      reply ??
+      `Got it — ${list}. Fill in ${config.tokenSymbol} prices below, then submit.`,
     draft,
   };
+}
+
+/** Import Shopify catalog → always confirm/edit XSGD prices (never auto-publish). */
+export async function importStoreFromUrl(
+  url: string,
+): Promise<MerchantToolResult> {
+  const imported = await importShopifyStore(url);
+  if (!imported.ok) {
+    return {
+      status: "clarify",
+      store: null,
+      reply: imported.reason,
+      draft: null,
+    };
+  }
+
+  const pricedCount = imported.draft.lines.filter((l) => l.price).length;
+  const reply = `Imported ${imported.productCount} product${imported.productCount === 1 ? "" : "s"} from ${imported.storeHost}. USD prices converted to ${config.tokenSymbol} at ${imported.rate.toFixed(4)} SGD per USD (${imported.rateSource}${pricedCount < imported.productCount ? "; some items need a price" : ""}). Confirm or edit prices below, then submit.`;
+
+  return needPriceResult(imported.draft, reply);
 }
 
 /** Deterministic + Bedrock-structured merchant tool. */
 export async function createStoreTool(args: {
   message?: string;
   csv?: string;
+  url?: string;
   draft?: MerchantDraft | null;
   /** Bedrock single-SKU fields (legacy). */
   quantity?: number;
@@ -114,8 +182,11 @@ export async function createStoreTool(args: {
   /** UI price-form submit: parallel to draft.lines */
   prices?: Array<string | number | null | undefined>;
   storeName?: string;
+  /** MetaMask personal_sign proof — required to publish (x402 payTo). */
+  merchantAuth?: MerchantAuthProof | null;
 }): Promise<MerchantToolResult> {
   const draft = normalizeDraft(args.draft);
+  const auth = args.merchantAuth;
 
   // Price form submit
   if (draft && args.prices && args.prices.length > 0) {
@@ -131,7 +202,12 @@ export async function createStoreTool(args: {
         draft: null,
       };
     }
-    return publishStore(parsed.inventory);
+    return publishStore(parsed.inventory, auth);
+  }
+
+  // Shopify / storefront URL — always confirm prices
+  if (args.url?.trim()) {
+    return importStoreFromUrl(args.url.trim());
   }
 
   // Bedrock multi-item path
@@ -167,6 +243,7 @@ export async function createStoreTool(args: {
         args.message,
         args.storeName,
       ),
+      auth,
     );
   }
 
@@ -188,6 +265,7 @@ export async function createStoreTool(args: {
         args.message,
         args.storeName,
       ),
+      auth,
     );
   }
 
@@ -210,5 +288,7 @@ export async function createStoreTool(args: {
     };
   }
 
-  return publishStore(parsed.inventory);
+  return publishStore(parsed.inventory, auth);
 }
+
+export type { HexAddress, MerchantAuthProof };

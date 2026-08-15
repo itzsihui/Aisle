@@ -1,4 +1,4 @@
-const SESSION_KEY = "aisle.demo.session.v1";
+const SESSION_KEY = "aisle.demo.session.v3";
 
 export type SessionStoreRef = {
   slug: string;
@@ -11,10 +11,19 @@ export type OnboardSession = {
   lines: Array<{ role: "merchant" | "aisle"; text: string; llm?: string }>;
   draft: {
     name?: string;
-    lines: Array<{ quantity: number; title: string }>;
+    lines: Array<{ quantity: number; title: string; price?: string }>;
   } | null;
   prices: string[];
+  quantities?: string[];
   slug: string | null;
+  merchantAddress?: string | null;
+  merchantAuth?: {
+    address: string;
+    message: string;
+    signature: string;
+    chainId: number;
+    authenticatedAt: string;
+  } | null;
 };
 
 export type BuyerSession = {
@@ -85,13 +94,12 @@ export function defaultBuyerPrompt(store?: SessionStoreRef | null) {
   return `Agent, go to /s/${store.slug} and buy ${article} ${product}.`;
 }
 
-export const DEFAULT_ONBOARD_MESSAGE =
-  "i wanna set up a phone store, 5 iphones, 5 samsungs";
+export const DEFAULT_ONBOARD_MESSAGE = "";
 
 export const DEFAULT_ONBOARD_LINES: OnboardSession["lines"] = [
   {
     role: "aisle",
-    text: "Describe inventory (or drop a CSV). I'll extract products, ask for XSGD prices, then publish llms.txt + agent.json for buying agents.",
+    text: "Add your first product\n\nWhat are you selling? That's the most exciting question in e-commerce! 🚀\n\nYou've got a few ways to get your first product into your store:\n\n• Add product — Build a listing from a description. Tell me what you stock and I'll pull title, quantity, and ask for XSGD prices — inventory ready for buying agents.\n• Import CSV — Already have a catalog? Bring it in via CSV (title, description, quantity, price).\n• Store URL — Paste a Shopify storefront (e.g. your-store.myshopify.com); we'll convert USD→XSGD suggestions for you to confirm.\n• Sign in with MetaMask — Approve connect + sign a message on Avalanche Fuji. That proves the payout address for x402 (no funds move).\n\nWhich of these fits where you're at? If you already know what you're selling, tell me about it (or drop a CSV / store URL!) and I'll get your first listing built out.",
   },
 ];
 

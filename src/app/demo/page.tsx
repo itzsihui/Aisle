@@ -78,14 +78,16 @@ export default function DemoPage() {
       <main className="mx-auto max-w-[1400px] px-6 pt-20 pb-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-medium tracking-tight">Handshake</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              Handshake
+            </h1>
             <p className="mt-2 max-w-[52ch] text-foreground/70">
               Pitch script for judges. Build stores on{" "}
-              <Link href="/onboard" className="underline underline-offset-2">
+              <Link href="/onboard" className="text-primary underline underline-offset-2">
                 Open a store
               </Link>
               ; pay on{" "}
-              <Link href="/buyer" className="underline underline-offset-2">
+              <Link href="/buyer" className="text-primary underline underline-offset-2">
                 Buyer
               </Link>
               .
@@ -102,7 +104,7 @@ export default function DemoPage() {
             </Button>
             <Link
               href="/dashboard"
-              className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted"
+              className="inline-flex h-10 items-center justify-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted"
             >
               Dashboard
             </Link>
@@ -123,8 +125,8 @@ export default function DemoPage() {
           </p>
         ) : null}
 
-        <section className="mt-8 border border-border">
-          <h2 className="border-b border-border px-4 py-3 text-sm font-medium">
+        <section className="mt-8 border border-border bg-background">
+          <h2 className="border-b border-border px-4 py-3 font-[family-name:var(--font-syne)] text-sm font-semibold tracking-tight">
             Script log
           </h2>
           <ScrollArea className="h-80 px-4 py-3">
