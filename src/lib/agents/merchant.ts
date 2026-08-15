@@ -37,6 +37,32 @@ export async function runMerchantAgent(args: {
     };
   }
 
+  // Chat follow-up with a pending draft — try deterministic parse before Bedrock
+  if (draft && args.message?.trim()) {
+    const pricedFollowUp = await createStoreTool({
+      message: args.message,
+      draft,
+    });
+    if (pricedFollowUp.status === "published") {
+      return {
+        store: pricedFollowUp.store,
+        status: pricedFollowUp.status,
+        reply: pricedFollowUp.reply,
+        draft: null,
+        llm: "deterministic",
+      };
+    }
+    if (pricedFollowUp.status === "need_price") {
+      return {
+        store: null,
+        status: "need_price",
+        reply: pricedFollowUp.reply,
+        draft: pricedFollowUp.draft,
+        llm: "deterministic",
+      };
+    }
+  }
+
   const userMessage =
     args.csv?.trim() ||
     args.message?.trim() ||

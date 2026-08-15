@@ -45,13 +45,26 @@ export default function OnboardPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = (await res.json()) as {
+      const raw = await res.text();
+      let data: {
         reply: string;
         store: { slug: string } | null;
         status?: "published" | "need_price" | "clarify";
         draft?: MerchantDraft | null;
         llm?: string;
       };
+      try {
+        data = JSON.parse(raw) as typeof data;
+      } catch {
+        throw new Error(
+          raw.trim()
+            ? `Merchant agent returned non-JSON (${res.status})`
+            : `Merchant agent returned empty response (${res.status})`,
+        );
+      }
+      if (!data.reply) {
+        data.reply = "No reply from merchant agent.";
+      }
       const nextDraft =
         data.status === "need_price"
           ? normalizeDraft(data.draft)
