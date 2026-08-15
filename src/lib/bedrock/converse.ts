@@ -21,8 +21,6 @@ export function bedrockWanted() {
 
 function client() {
   const token = process.env.AWS_BEARER_TOKEN_BEDROCK?.trim();
-  // Prefer Bedrock API key only when set; otherwise use dedicated Bedrock IAM
-  // (BEDROCK_AWS_*) so Dynamo can keep hackathon AWS_* keys separately.
   if (token) {
     return new BedrockRuntimeClient({
       region: config.bedrockRegion,
@@ -32,11 +30,15 @@ function client() {
   }
 
   const accessKeyId =
-    process.env.BEDROCK_AWS_ACCESS_KEY_ID?.trim() ||
-    process.env.AWS_ACCESS_KEY_ID?.trim();
+    process.env.AWS_ACCESS_KEY_ID?.trim() ||
+    process.env.BEDROCK_AWS_ACCESS_KEY_ID?.trim();
   const secretAccessKey =
-    process.env.BEDROCK_AWS_SECRET_ACCESS_KEY?.trim() ||
-    process.env.AWS_SECRET_ACCESS_KEY?.trim();
+    process.env.AWS_SECRET_ACCESS_KEY?.trim() ||
+    process.env.BEDROCK_AWS_SECRET_ACCESS_KEY?.trim();
+
+  if (accessKeyId?.includes("/")) {
+    return new BedrockRuntimeClient({ region: config.bedrockRegion });
+  }
 
   if (accessKeyId && secretAccessKey) {
     return new BedrockRuntimeClient({

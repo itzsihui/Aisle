@@ -42,7 +42,7 @@ export async function POST(request: Request) {
           message.includes("credentials") ||
           message.includes("AccessDenied") ||
           message.includes("not authorized")
-          ? `Could not publish store (storage/credentials): ${message}. If AISLE_TABLE is set, AWS_* must be the hackathon account that owns DynamoDB; put personal Bedrock keys in BEDROCK_AWS_ACCESS_KEY_ID / BEDROCK_AWS_SECRET_ACCESS_KEY.`
+          ? `Could not publish store (storage/credentials): ${message}. With AISLE_TABLE unset, stores use in-memory on this Next server. For Dynamo, AWS_ACCESS_KEY_ID must be AKIA…/ASIA… (not the secret).`
           : `Could not publish store: ${message}`,
         draft: null,
         llm: "deterministic",

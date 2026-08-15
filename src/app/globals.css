@@ -130,10 +130,18 @@
 }
 
 .aisle-grid {
+  background-color: oklch(0.965 0.008 240);
   background-image:
-    linear-gradient(to right, oklch(0.78 0.02 240 / 0.35) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.78 0.02 240 / 0.35) 1px, transparent 1px);
+    linear-gradient(to right, oklch(0.78 0.02 240 / 0.22) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.78 0.02 240 / 0.22) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+
+/* Softer wallpaper when content sits on a solid panel */
+.aisle-grid-soft {
+  background-image:
+    linear-gradient(to right, oklch(0.78 0.02 240 / 0.14) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.78 0.02 240 / 0.14) 1px, transparent 1px);
 }
 
 /* Landing — cinematic stage over GetLayers metalHuman loop */

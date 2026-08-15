@@ -134,17 +134,18 @@ export default function OnboardPage() {
   }
 
   return (
-    <div className="aisle-grid flex h-[100dvh] flex-col overflow-hidden">
-      <SiteHeader />
-      <main className="grid min-h-0 flex-1 grid-cols-1 pt-16 lg:grid-cols-2">
-        <section className="flex min-h-0 flex-col border-b border-border lg:border-b-0 lg:border-r">
-          <div className="shrink-0 border-b border-border px-4 py-3">
-            <h1 className="text-lg font-medium tracking-tight">Open a store</h1>
-            <p className="mt-0.5 text-xs text-foreground/55">
-              Converse → price → publish. Agents get URLs, not a checkout page.
-            </p>
-          </div>
-          <div className="min-h-0 flex-1">
+    <div className="aisle-grid aisle-grid-soft flex h-[100dvh] p-3 md:p-4">
+      <div className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+        <SiteHeader />
+        <main className="grid min-h-0 flex-1 grid-cols-1 pt-16 lg:grid-cols-2">
+          <section className="flex min-h-0 flex-col border-b border-border bg-background lg:border-b-0 lg:border-r">
+            <div className="shrink-0 border-b border-border px-4 py-3">
+              <h1 className="text-lg font-medium tracking-tight">Open a store</h1>
+              <p className="mt-0.5 text-xs text-foreground/55">
+                Converse → price → publish. Agents get URLs, not a checkout page.
+              </p>
+            </div>
+            <div className="min-h-0 flex-1 bg-background">
               <MerchantChat
                 lines={lines}
                 message={message}
@@ -165,13 +166,14 @@ export default function OnboardPage() {
                 }
               />
             </div>
-        </section>
+          </section>
 
-        <section className="flex min-h-0 flex-col">
-          <DiscoveryPane slug={slug} refreshKey={refreshKey} />
-          <EndpointLab slug={slug} refreshKey={refreshKey} />
-        </section>
-      </main>
+          <section className="flex min-h-0 flex-col bg-background">
+            <DiscoveryPane slug={slug} refreshKey={refreshKey} />
+            <EndpointLab slug={slug} refreshKey={refreshKey} />
+          </section>
+        </main>
+      </div>
     </div>
   );
 }

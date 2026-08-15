@@ -12,12 +12,39 @@ import type { CardMandate, Order, StoreRecord } from "@/lib/store/types";
 
 const table = () => process.env.AISLE_TABLE!;
 
-const doc = DynamoDBDocumentClient.from(
-  new DynamoDBClient({
-    region: process.env.AWS_REGION || config.bedrockRegion || "ap-southeast-1",
-  }),
-  { marshallOptions: { removeUndefinedValues: true } },
-);
+/** Reject swapped secret-as-access-key (secrets often contain `/`). */
+function explicitEnvCredentials() {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY?.trim();
+  if (!accessKeyId || !secretAccessKey) return undefined;
+  if (
+    accessKeyId.includes("/") ||
+    (!accessKeyId.startsWith("AKIA") && !accessKeyId.startsWith("ASIA"))
+  ) {
+    console.warn(
+      "[dynamo] Ignoring malformed AWS_ACCESS_KEY_ID (looks like a secret). Use AKIA…/ASIA… for Dynamo; put personal Bedrock keys in BEDROCK_AWS_*.",
+    );
+    return undefined;
+  }
+  return {
+    accessKeyId,
+    secretAccessKey,
+    sessionToken: process.env.AWS_SESSION_TOKEN?.trim() || undefined,
+  };
+}
+
+const dynamoClient = (() => {
+  const region =
+    process.env.AWS_REGION || config.bedrockRegion || "ap-southeast-1";
+  const credentials = explicitEnvCredentials();
+  return new DynamoDBClient(
+    credentials ? { region, credentials } : { region },
+  );
+})();
+
+const doc = DynamoDBDocumentClient.from(dynamoClient, {
+  marshallOptions: { removeUndefinedValues: true },
+});
 
 function storePk(slug: string) {
   return `STORE#${slug}`;
