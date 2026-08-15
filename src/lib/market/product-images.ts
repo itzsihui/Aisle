@@ -1,8 +1,8 @@
-/** Unique stock photos per demo SKU (Unsplash). */
+/** Unique stock photos per demo SKU (Unsplash only — must match next.config remotePatterns). */
 
 const BY_ID: Record<string, string> = {
   "tulip-bouquet":
-    "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=800&h=800&fit=crop",
+    "https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?w=800&h=800&fit=crop&auto=format",
   "orchid-pot":
     "https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=800&h=800&fit=crop&auto=format",
   "lavender-bundle":
@@ -38,78 +38,50 @@ const BY_ID: Record<string, string> = {
 };
 
 const BY_TITLE: Array<{ match: RegExp; src: string }> = [
+  { match: /tulip/i, src: BY_ID["tulip-bouquet"] },
+  { match: /orchid/i, src: BY_ID["orchid-pot"] },
+  { match: /lavender/i, src: BY_ID["lavender-bundle"] },
+  { match: /greeting|card|sticker/i, src: BY_ID["greeting-card"] },
+  { match: /vase/i, src: BY_ID["vase-small"] },
+  { match: /iphone/i, src: BY_ID["iphone-15"] },
+  { match: /galaxy|samsung/i, src: BY_ID["galaxy-s24"] },
+  { match: /pixel/i, src: BY_ID["pixel-8"] },
+  { match: /usb|cable/i, src: BY_ID["usbc-cable"] },
+  { match: /magsafe|case/i, src: BY_ID["magsafe-case"] },
+  { match: /ethiopia|yirgacheffe/i, src: BY_ID.ethiopia },
+  { match: /colombia|huila/i, src: BY_ID.colombia },
+  { match: /espresso/i, src: BY_ID.espresso },
+  { match: /cold brew/i, src: BY_ID["cold-brew"] },
+  { match: /cup|tumbler/i, src: BY_ID.tumbler },
+  { match: /shirt|tee|hackathon/i, src: BY_ID.shirt },
+  { match: /cap|hat/i, src: BY_ID["aisle-cap"] },
   {
-    match: /tulip/i,
-    src: BY_ID["tulip-bouquet"],
+    match: /pen|pencil|eraser|stationery/i,
+    src: "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=800&h=800&fit=crop&auto=format",
   },
   {
-    match: /orchid/i,
-    src: BY_ID["orchid-pot"],
-  },
-  {
-    match: /lavender/i,
-    src: BY_ID["lavender-bundle"],
-  },
-  {
-    match: /greeting|card/i,
-    src: BY_ID["greeting-card"],
-  },
-  {
-    match: /vase/i,
-    src: BY_ID["vase-small"],
-  },
-  {
-    match: /iphone/i,
-    src: BY_ID["iphone-15"],
-  },
-  {
-    match: /galaxy|samsung/i,
-    src: BY_ID["galaxy-s24"],
-  },
-  {
-    match: /pixel/i,
-    src: BY_ID["pixel-8"],
-  },
-  {
-    match: /usb|cable/i,
-    src: BY_ID["usbc-cable"],
-  },
-  {
-    match: /magsafe|case/i,
-    src: BY_ID["magsafe-case"],
-  },
-  {
-    match: /ethiopia|yirgacheffe/i,
-    src: BY_ID.ethiopia,
-  },
-  {
-    match: /colombia|huila/i,
-    src: BY_ID.colombia,
-  },
-  {
-    match: /espresso/i,
-    src: BY_ID.espresso,
-  },
-  {
-    match: /cold brew/i,
-    src: BY_ID["cold-brew"],
-  },
-  {
-    match: /cup|tumbler/i,
-    src: BY_ID.tumbler,
-  },
-  {
-    match: /shirt|tee|hackathon/i,
-    src: BY_ID.shirt,
-  },
-  {
-    match: /cap|hat/i,
-    src: BY_ID["aisle-cap"],
+    match: /jean|denim|pant/i,
+    src: "https://images.unsplash.com/photo-1542272454315-7f6b6f6608a1?w=800&h=800&fit=crop&auto=format",
   },
 ];
 
-const FALLBACK =
-  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop&auto=format";
+/** Pool used when no id/title rule matches — all on images.unsplash.com. */
+const FALLBACKS = [
+  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=800&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=800&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=800&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=800&h=800&fit=crop&auto=format",
+  "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&h=800&fit=crop&auto=format",
+];
+
+function hashSeed(value: string): number {
+  let h = 0;
+  for (let i = 0; i < value.length; i++) {
+    h = (h * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
 
 export function imageForProduct(
   title: string,
@@ -121,7 +93,7 @@ export function imageForProduct(
   for (const rule of BY_TITLE) {
     if (rule.match.test(hay)) return rule.src;
   }
-  // Deterministic unique fallback so nothing is blank
-  const seed = encodeURIComponent(id || title || "aisle");
-  return `https://picsum.photos/seed/${seed}/800/800`;
+  // Stay on Unsplash — picsum.photos is not in next/image remotePatterns (breaks on Vercel).
+  const seed = id || title || "aisle";
+  return FALLBACKS[hashSeed(seed) % FALLBACKS.length]!;
 }
