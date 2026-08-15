@@ -1,5 +1,6 @@
 import { convertUsdToSgd, fetchUsdToSgdRate } from "@/lib/inventory/fx";
 import type { MerchantDraft, MerchantDraftLine } from "@/lib/inventory/parse";
+import { config } from "@/lib/config";
 
 const PRODUCT_LIMIT = 25;
 const MAX_REDIRECTS = 5;
@@ -268,16 +269,21 @@ export async function importShopifyStore(
     const title = String(product.title || "").trim();
     if (!title) continue;
     const usd = pickVariantPrice(product);
-    const price = usd !== null ? convertUsdToSgd(usd, rate) : undefined;
+    const retailSgd = usd !== null ? convertUsdToSgd(usd, rate) : undefined;
     const description = product.body_html
       ? stripHtml(product.body_html).slice(0, 500)
       : undefined;
+    // Demo floor: StraitsX sandbox min is 5 SGD; don't use full retail converts.
     lines.push({
       quantity: 100,
       title,
       name: title,
-      description: description || undefined,
-      price: price || undefined,
+      description:
+        description ||
+        (retailSgd
+          ? `Retail ~${retailSgd} SGD (USD→SGD); demo price ${config.demoUnitPriceXsgd} XSGD`
+          : undefined),
+      price: config.demoUnitPriceXsgd,
     });
   }
 

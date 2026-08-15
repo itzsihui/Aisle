@@ -162,7 +162,7 @@ export async function importStoreFromUrl(
   }
 
   const pricedCount = imported.draft.lines.filter((l) => l.price).length;
-  const reply = `Imported ${imported.productCount} product${imported.productCount === 1 ? "" : "s"} from ${imported.storeHost}. USD prices converted to ${config.tokenSymbol} at ${imported.rate.toFixed(4)} SGD per USD (${imported.rateSource}${pricedCount < imported.productCount ? "; some items need a price" : ""}). Confirm or edit prices below, then submit.`;
+  const reply = `Imported ${imported.productCount} product${imported.productCount === 1 ? "" : "s"} from ${imported.storeHost}. Demo unit price set to ${config.demoUnitPriceXsgd} ${config.tokenSymbol} each (StraitsX sandbox minimum; FX rate was ${imported.rate.toFixed(4)} SGD/USD via ${imported.rateSource}${pricedCount < imported.productCount ? "; some items need a price" : ""}). Confirm or edit below, then submit.`;
 
   return needPriceResult(imported.draft, reply);
 }

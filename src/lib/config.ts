@@ -17,6 +17,11 @@ export const config = {
   ) as `0x${string}`,
   tokenSymbol: env("TOKEN_SYMBOL", "XSGD"),
   tokenDecimals: Number(env("TOKEN_DECIMALS", "6")),
+  /**
+   * Demo unit price in XSGD. StraitsX sandbox card issuance requires 5–30 SGD;
+   * keep store SKUs at this floor so x402 + card rails stay aligned.
+   */
+  demoUnitPriceXsgd: "5.00",
   merchantAddress: env(
     "MERCHANT_ADDRESS",
     "0x0000000000000000000000000000000000000000",

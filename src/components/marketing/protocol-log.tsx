@@ -60,10 +60,15 @@ export function ProtocolLog({ className }: { className?: string }) {
               key={`${event.ts}-${event.path}-${event.message}`}
               className={cn(
                 "whitespace-pre-wrap",
-                event.status === 402 && "text-red-400",
+                // x402 / cardapi: HTTP 402 is the payment challenge — success path, not an error
+                event.status === 402 && "text-amber-300",
                 event.status === 200 && "text-emerald-400",
-                event.status >= 400 && event.status !== 402 && "text-amber-300",
-                event.status < 400 && event.status !== 200 && "text-neutral-400",
+                event.status >= 400 &&
+                  event.status !== 402 &&
+                  "text-red-400",
+                event.status < 400 &&
+                  event.status !== 200 &&
+                  "text-neutral-400",
               )}
             >
               {new Date(event.ts).toISOString().slice(11, 23)} {event.method}{" "}

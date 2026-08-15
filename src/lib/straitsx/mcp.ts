@@ -206,7 +206,25 @@ async function issueViaCardMcp(args: {
     },
     body: JSON.stringify(body),
   });
-  const issued = (await second.json()) as IssuedCard & { error?: string };
+  const secondText = await second.text();
+  let issued: IssuedCard & { error?: string };
+  try {
+    issued = JSON.parse(secondText) as IssuedCard & { error?: string };
+  } catch {
+    emit({
+      status: second.status,
+      method: "POST",
+      path: "straitsx-cardapi",
+      store: args.merchant,
+      rail: "straitsx-card",
+      message: `cardapi settle non-JSON ${second.status}: ${secondText.slice(0, 120)}`,
+    });
+    throw new Error(
+      second.ok
+        ? `cardapi returned non-JSON after EIP-3009 settle: ${secondText.slice(0, 80)}`
+        : `cardapi settle HTTP ${second.status}: ${secondText.slice(0, 120)}`,
+    );
+  }
   emit({
     status: second.status,
     method: "POST",

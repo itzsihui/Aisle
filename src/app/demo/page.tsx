@@ -29,7 +29,7 @@ export default function DemoPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           merchantMessage:
-            "Create a store. I'm selling 50 StraitsX Hackathon Shirts for 1 XSGD each.",
+            "Create a store. I'm selling 50 StraitsX Hackathon Shirts for 5 XSGD each.",
           buyerMessage:
             "Agent, go to /s/hackathon-shirts and buy a hackathon shirt.",
           rails: ["x402", "card"],

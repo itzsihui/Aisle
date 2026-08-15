@@ -37,7 +37,7 @@ export async function runCardAgent(args: {
     return { steps };
   }
   const store = await repo.getStore(slug);
-  const price = store?.skus.find((s) => s.id === sku.id)?.price ?? "1.00";
+  const price = store?.skus.find((s) => s.id === sku.id)?.price ?? "5.00";
   steps.push({
     type: "http",
     text: `GET catalog.json → ${catalogRes.status} ${sku.title} @ ${price}`,
