@@ -122,6 +122,17 @@ npm run protocol:deploy
 
 Paste the printed `PROTOCOL_BASE_URL` and `AISLE_TABLE` into `.env`, then restart `npm run dev`. Delete the CloudFormation stack when you are done.
 
+### Buyer says `store not found` / Expected 402
+
+AWS login can be fine while the buyer still fails. The buyer does **not** use your browser session — it calls `PROTOCOL_BASE_URL`.
+
+1. Confirm the URL your app is using: open `/api/ops` and check `aws.protocolBase`.
+2. It must match the **current** stack output (`ProtocolBaseUrl` from `npm run protocol:deploy`). Redeploys often mint a **new** API id (e.g. `jx1brt3bz6…` vs an old `51xznqu32m…`).
+3. Update both `PROTOCOL_BASE_URL` and `NEXT_PUBLIC_PROTOCOL_BASE_URL` in `.env`, then **restart** `npm run dev` (env is loaded at process start).
+4. Smoke test: `curl -s "$PROTOCOL_BASE_URL/s/your-slug/llms.txt"` should be **200**, and `POST …/buy` without payment should be **402**.
+
+Stores published via `/onboard` land in `AISLE_TABLE`. If `PROTOCOL_BASE_URL` points at an old API/table, local `/s/…/llms.txt` can be 200 while the buyer still gets 404.
+
 ## Scripts
 
 | Command | Purpose |
