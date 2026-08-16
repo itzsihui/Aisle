@@ -2,45 +2,132 @@
 
 Agentic Storefront Protocol: merchants talk, agents pay — **Avalanche x402**, **StraitsX** scoped cards, **AWS** Bedrock + serverless protocol.
 
-## Run
+Architecture diagram: [`architecture.drawio`](./architecture.drawio)
+
+## Prerequisites
+
+- Node.js 20+
+- npm
+- (Optional) [AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) — needed for protocol deploy; also handy to verify Bedrock access
+- (Optional) Funded Avalanche Fuji wallet with XSGD for live x402 settlement
+
+You can skip AWS entirely: the app still runs, `llms.txt` / x402 **402** still work, and agents fall back to deterministic tools when Bedrock is unavailable.
+
+## Setup
+
+1. **Clone and install**
+
+```bash
+git clone https://github.com/itzsihui/Aisle.git
+cd Aisle
+npm install
+```
+
+2. **Create env file**
 
 ```bash
 cp .env.example .env
-npm install
+```
+
+3. **Log into AWS** (optional — Bedrock agents and/or Lambda deploy)
+
+Pick one auth path:
+
+**A. Access keys in `.env` (app runtime — Bedrock / DynamoDB)**
+
+In the AWS console: **IAM → Users → Security credentials → Create access key**. Paste into `.env`:
+
+```bash
+AWS_REGION=ap-southeast-1
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+BEDROCK_ENABLED=true
+BEDROCK_MODEL_ID=anthropic.claude-3-haiku-20240307-v1:0
+```
+
+Also enable model access in the console: **Amazon Bedrock → Model access** (same region), for the model id above.
+
+**B. AWS SSO / CLI profile (hackathon credits + `protocol:deploy`)**
+
+Hackathon and org accounts usually use IAM Identity Center. After you accept the invite, open the AWS access portal, pick the account/role, then set up the CLI once:
+
+```bash
+aws configure sso
+# follow prompts (start URL, region, account, role)
+# profile name often looks like: AdministratorAccess-<account-id>
+```
+
+Each session (tokens expire), log in with **your** profile name:
+
+```bash
+aws sso login --profile AdministratorAccess-283515821863
+export AWS_PROFILE=AdministratorAccess-283515821863
+export AWS_REGION=ap-southeast-1
+```
+
+Replace `283515821863` with the account id from your access portal / `~/.aws/config`. List profiles with `aws configure list-profiles`.
+
+Confirm:
+
+```bash
+aws sts get-caller-identity
+```
+
+You should see `Account`, `UserId`, and `Arn`. If this fails, fix SSO before `npm run protocol:deploy`.
+
+**Personal account (no SSO):** use `aws configure` with an IAM access key, or put keys in `.env` (path A). Same `sts get-caller-identity` check.
+
+IAM needs at least: Bedrock `InvokeModel` / Converse for agents; for deploy, CloudFormation + Lambda + API Gateway + DynamoDB + S3 + IAM + CloudWatch + SSM in the target account/region.
+
+4. **Configure remaining `.env`**
+
+| Var | Required? | Purpose |
+|---|---|---|
+| `MERCHANT_ADDRESS` | Recommended | Avalanche pay-to address for x402 |
+| `BUYER_PRIVATE_KEY` | Optional | Buyer wallet for live XSGD settlement; without it, **HTTP 402 still fires** |
+| `BUYER_ADDRESS` | Optional | Buyer address paired with the private key |
+| `STRAITSX_MCP_URL` | Optional | Card MCP (`…/sandbox/sse` or production); defaults in `.env.example` |
+| `AWS_*` / `BEDROCK_*` | Optional | See step 3 |
+| `PROTOCOL_BASE_URL` / `AISLE_TABLE` | Optional | Set after AWS protocol deploy so agents hit API Gateway instead of Next |
+
+Avalanche Fuji defaults (RPC, chain id, XSGD token, Snowtrace) are already in `.env.example`. Uncomment the mainnet block only for live XSGD.
+
+5. **Start the app**
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:3000/demo](http://localhost:3000/demo) → **Run full 90s script**.
+Open [http://localhost:3000](http://localhost:3000).
 
-Seed store: `/s/hackathon-shirts/llms.txt`
+Useful paths:
 
-## 90-second pitch (say the three names)
-
-1. **Merchant (15s)** — “Aisle is Shopify for AI agents. Merchant types inventory in XSGD; we publish `llms.txt` + ACP catalog. No human checkout UI.”
-2. **Avalanche (30s)** — Click **Buy via x402** (or full script). Terminal goes **red HTTP 402** → agent transfers XSGD on Avalanche → **green 200** + **Snowtrace** link on the receipt. That is Best Use of x402.
-3. **StraitsX (25s)** — Same demo, **StraitsX card rail**: one-time card with spend cap = SKU, merchant whitelist, short TTL, then burn. Agentic payments without leaking a standing credential.
-4. **AWS (20s)** — Agents optionally run on **Bedrock Converse + tools** (deterministic fallback if Bedrock is down). Protocol deploys as **API Gateway + Lambda + DynamoDB + CloudWatch 402→200** — Well-Architected slice, not the giant Bedrock shopping CDK. Dashboard shows both rails.
-
-Judges open: `/demo` log, Snowtrace URL, `/dashboard` (x402 + StraitsX rows), CloudWatch dashboard after `npm run protocol:deploy`.
-
-## Env
-
-| Var | Purpose |
+| Path | What it is |
 |---|---|
-| `MERCHANT_ADDRESS` / `BUYER_PRIVATE_KEY` | Avalanche x402 settlement |
-| `STRAITSX_MCP_URL` | Card MCP (`…/sandbox/sse` or production) |
-| `BEDROCK_ENABLED` | Default on; set `false` to force deterministic agents |
-| `BEDROCK_MODEL_ID` / `AWS_REGION` | Bedrock Converse |
-| `PROTOCOL_BASE_URL` / `AISLE_TABLE` | After AWS protocol deploy |
+| `/onboard` | Merchant agent: inventory → published store |
+| `/demo` | End-to-end protocol demo (x402 + StraitsX) |
+| `/buyer` | Buyer agent surface |
+| `/market` | Sample storefronts |
+| `/dashboard` | Ops view of both payment rails |
+| `/s/hackathon-shirts/llms.txt` | Seed store agent discovery |
 
-Without `BUYER_PRIVATE_KEY`, **402 still fires** (prize visual). Settlement needs funded XSGD.
+## Optional: AWS protocol deploy
 
-## AWS protocol deploy
+Requires AWS CLI logged in (`aws sts get-caller-identity` succeeds). Deploys the same storefront handlers as API Gateway + Lambda + DynamoDB + CloudWatch (`infra/protocol.yaml`).
 
 ```bash
 export AWS_REGION=ap-southeast-1 MERCHANT_ADDRESS=0xYourMerchant
 npm run protocol:deploy
-# paste PROTOCOL_BASE_URL + AISLE_TABLE into .env
 ```
 
-See `infra/protocol.yaml` — throttle, SSM, DynamoDB, CloudWatch metric filters + alarm. Delete the stack after the hackathon.
+Paste the printed `PROTOCOL_BASE_URL` and `AISLE_TABLE` into `.env`, then restart `npm run dev`. Delete the CloudFormation stack when you are done.
+
+## Scripts
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Local Next.js server |
+| `npm run build` / `npm start` | Production build |
+| `npm run lint` | ESLint |
+| `npm run protocol:build` | Bundle Lambda artifact |
+| `npm run protocol:deploy` | Build + upload + CloudFormation deploy |
