@@ -2,7 +2,7 @@
 
 Agentic Storefront Protocol: merchants talk, agents pay — **Avalanche x402**, **StraitsX** scoped cards, **AWS** Bedrock + serverless protocol.
 
-Architecture diagram: [`architecture.drawio`](./architecture.drawio)
+Architecture: [`architecture.drawio`](./architecture.drawio) (multi-page — open in [diagrams.net](https://app.diagrams.net/)). Tabs: overview, product, protocol, x402, StraitsX, agents, AWS, data model.
 
 ## Prerequisites
 
